@@ -45,7 +45,7 @@ plugin.exports = class Plugin implements BookSource {
    * 静态属性 PLUGIN_FILE_URL  必填
    * 插件http、https链接, 如: http://example.com/plugin-template.js
    */
-  public static readonly PLUGIN_FILE_URL: string = 'https://raw.kkgithub.com/MaxOSSC/ReadCat-BookSource/main/Plugin/maxos-23uswx.org.ts.js';
+  public static readonly PLUGIN_FILE_URL: string = 'https://raw.kkgithub.com/Maxthos/ReadCat-BookSource/main/Plugin/maxos-23uswx.org.ts.js';
   /**
    * 静态属性 BASE_URL  必填
    * 插件请求目标链接
@@ -180,7 +180,7 @@ plugin.exports = class Plugin implements BookSource {
   async getTextContent(chapter: Chapter): Promise<string[]> {
     const { body } = await this.request.get(chapter.url);
     const $ = this.cheerio(body);
-    $('#content div').remove('div');
+    $('#content div').remove();
     return $('#content').html().split('<br>').filter(t => t.trim());
   }
 

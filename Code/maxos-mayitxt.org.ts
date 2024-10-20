@@ -11,7 +11,7 @@ plugin.exports = class Plugin implements BookSource {
    * 静态属性 ID  自动生成
    * 该值需符合正则表达式: [A-Za-z0-9_-]
    */
-  public static readonly ID: string = "FeY7BVuCE_rFKdrE0cenj";
+  public static readonly ID: string = "RipYNVxhVR7aTH22P56gJ";
   /**
    * 静态属性 TYPE  必填
    * 插件类型
@@ -29,7 +29,7 @@ plugin.exports = class Plugin implements BookSource {
    * 静态属性 NAME  必填
    * 插件名称
    */
-  public static readonly NAME: string = "笔趣阁";
+  public static readonly NAME: string = "蚂蚁阅读";
   /**
    * 静态属性 VERSION  必填
    * 插件版本  用于显示
@@ -44,13 +44,12 @@ plugin.exports = class Plugin implements BookSource {
    * 静态属性 PLUGIN_FILE_URL  必填
    * 插件http、https链接, 如: http://example.com/plugin-template.js
    */
-  public static readonly PLUGIN_FILE_URL: string =
-    "https://raw.kkgithub.com/Maxthos/ReadCat-BookSource/main/Plugin/maxos-xzmncy.com.ts.js";
+  public static readonly PLUGIN_FILE_URL: string = "";
   /**
    * 静态属性 BASE_URL  必填
    * 插件请求目标链接
    */
-  public static readonly BASE_URL: string = "https://www.xzmncy.com";
+  public static readonly BASE_URL: string = "http://www.mayitxt.org";
   /**
    * 静态属性 REQUIRE  可选
    * 要求用户填写的值
@@ -123,21 +122,30 @@ plugin.exports = class Plugin implements BookSource {
      */
     this.nanoid = nanoid;
   }
-
+// http://www.mayitxt.org/modules/article/search.php?q=%E5%AE%8C%E7%BE%8E%E4%B8%96%E7%95%8C&searchtype=all&s=17333194950446968473
+// http://www.mayitxt.org/modules/article/search.php?q=%E5%AE%8C%E7%BE%8E%E4%B8%96%E7%95%8C&searchtype=all&s=17333194950446968473
   async search(searchkey: string): Promise<SearchEntity[]> {
-    const { body } = await this.request.get(`${Plugin.BASE_URL}/api/search?q=${searchkey}`);
-    const list = JSON.parse(body).data.search;
-    if (isUndefined(list) || !isArray(list)) {
-      return [];
-    }
+    const { body } = await this.request.get(
+      `${Plugin.BASE_URL}/modules/article/search.php?q=${searchkey}&searchtype=all&s=17333194950446968473`
+    );
+    const $ = this.cheerio(body);
+    const trs = $("tbody tr:nth-child(n+2)");
+    console.log(trs.length);
     const results: SearchEntity[] = [];
-    for (const item of list) {
+    for (const tr of trs) {
+      console.log(tr);
+      const td = $(tr).find("td");
+      const regex = /\/(\d+)_(\d+)\//;
+      const match = $(td.get(2)).children("a").attr("href").match(regex);
+      const fid = match[1];
+      const bid = match[2];
+      console.log(fid, bid);
       results.push({
-        bookname: item.book_name,
-        author: item.author,
-        coverImageUrl: Plugin.BASE_URL + item.cover,
-        detailPageUrl: Plugin.BASE_URL + item.book_list_url,
-        latestChapterTitle: item.latest_chapter_name,
+        bookname: $(td.get(2)).children("a").text(),
+        author: $(td.get(5)).text(),
+        coverImageUrl: `${Plugin.BASE_URL}/files/article/image/${fid}/${bid}/${bid}s.jpg`,
+        detailPageUrl: $(td.get(0)).children("a").attr("href"),
+        latestChapterTitle: $(td.get(3)).text(),
       });
     }
     return results;
@@ -146,11 +154,11 @@ plugin.exports = class Plugin implements BookSource {
   async getDetail(detailPageUrl: string): Promise<DetailEntity> {
     const { body } = await this.request.get(detailPageUrl);
     const $ = this.cheerio(body);
-    const bookname = $("#info > div.info > div.infobar > h1").text();
-    const author = $("#info > div.info > div.infobar > p:nth-child(2)").text().substring(5);
-    const latestChapterTitle = $("#info > div.info > div.infobar > p:nth-child(6) > a").text();
-    const coverImageUrl = $("#info > div.sidebar > div > img").attr("src");
-    const intro = $("#info > div.info > div.intro > p").text();
+    const bookname = $("#info > h1").text();
+    const author = $("#info > p:nth-child(2) > a").text();
+    const latestChapterTitle = $("#info > p:nth-child(5) > a").text();
+    const coverImageUrl = $("#fmimg > img").attr("src");
+    const intro = $("#intro").text();
     // console.log(detailPageUrl);
     const items = $("#list > dl > dd");
     const chapterList: Chapter[] = [];
@@ -174,7 +182,8 @@ plugin.exports = class Plugin implements BookSource {
   async getTextContent(chapter: Chapter): Promise<string[]> {
     const { body } = await this.request.get(chapter.url);
     const $ = this.cheerio(body);
-    return $("#htmlContent")
+    $("#content div").remove("div");
+    return $("#content")
       .html()
       .split("<br>")
       .filter((t) => t.trim());
