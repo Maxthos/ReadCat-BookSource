@@ -35,7 +35,7 @@ plugin.exports = class Plugin implements BookSource {
    * 静态属性 VERSION  必填
    * 插件版本  用于显示
    */
-  public static readonly VERSION: string = '1.0.0';
+  public static readonly VERSION: string = '1.0.1';
   /**
    * 静态属性 VERSION_CODE  必填
    * 插件版本代码  用于比较本地插件与静态属性PLUGIN_FILE_URL所指插件的版本号
@@ -129,16 +129,11 @@ plugin.exports = class Plugin implements BookSource {
     const { body } = await this.request.get(`${Plugin.BASE_URL}/so/${searchkey}`);
     const $ = this.cheerio(body);
     const dis = $("main.flex > div");
-    console.log(dis.length);
+    //console.log(dis.length);
     const results: SearchEntity[] = [];
     for (const di of dis) {
       const d = $(di).find("div:nth-child(1)");
       const c = $(di).find("div:nth-child(1) p");
-      // console.log(d.children("h3").text());
-      // console.log(d.children("span").text().substring(3));
-      // console.log(d.children("img").attr("src"));
-      // console.log(Plugin.BASE_URL + d.children("a").attr("href"));
-      // console.log(c.children("a").text().substring(5));
       results.push({
         bookname: d.children("h3").text(),
         author: d.children("span").text().substring(3),
@@ -154,11 +149,11 @@ plugin.exports = class Plugin implements BookSource {
     const { body } = await this.request.get(detailPageUrl);
     const $ = this.cheerio(body);
     const bookname = $("h1").text();
-    const author = $("span.text-sm.text-primarySix").text().substring(3);
+    const author = $("span.text-sm.text-primarySix").text().substring(4);//split(": ")[1]
     const latestChapterTitle = $("p.mb-7 > a").text();
-    const coverImageUrl = $("biv.book-cover img").attr("src");
-    const intro = $("p.mb-20").text();
-    // console.log(detailPageUrl);
+    const coverImageUrl = $("div.book-cover img").attr("src");
+    //console.log(coverImageUrl);
+    const intro = $("p.mb-20").text().trim();
     const items = $("div.flex.flex-row.flex-wrap > a");
     const chapterList: Chapter[] = [];
     for (const item of items) {

@@ -1,3 +1,4 @@
+
 /**
  * 文件编码: UTF-8(如不是UTF8编码可能会导致乱码或未知错误)
  * 禁止使用import、require导入模块
@@ -8,33 +9,34 @@
  */
 plugin.exports = class Plugin implements BookSource {
   /**
-   * 静态属性 ID  自动生成
+   * 静态属性 ID  若使用插件开发工具生成模板则自动生成
    * 该值需符合正则表达式: [A-Za-z0-9_-]
    */
-  public static readonly ID: string = "gZWxx3mnNzB5KDHZE2YwR";
+  public static readonly ID: string = '8s4K_SbZlemrK9LVddIHb';
   /**
    * 静态属性 TYPE  必填
    * 插件类型
    * 值类型:
    * plugin.type.BOOK_SOURCE  - 表示该插件为书源类
    * plugin.type.BOOK_STORE   - 表示该插件为书城类
+   * plugin.type.TTS_ENGINE   - 表示该插件为TTS引擎类
    */
   public static readonly TYPE: number = plugin.type.BOOK_SOURCE;
   /**
    * 静态属性 GROUP  必填
    * 插件分组
    */
-  public static readonly GROUP: string = "👻MaxOS";
+  public static readonly GROUP: string = '👻MaxOS';
   /**
    * 静态属性 NAME  必填
    * 插件名称
    */
-  public static readonly NAME: string = "玄幻阁";
+  public static readonly NAME: string = '悠久小说';
   /**
    * 静态属性 VERSION  必填
    * 插件版本  用于显示
    */
-  public static readonly VERSION: string = "1.0.0";
+  public static readonly VERSION: string = '1.0.0';
   /**
    * 静态属性 VERSION_CODE  必填
    * 插件版本代码  用于比较本地插件与静态属性PLUGIN_FILE_URL所指插件的版本号
@@ -44,24 +46,32 @@ plugin.exports = class Plugin implements BookSource {
    * 静态属性 PLUGIN_FILE_URL  必填
    * 插件http、https链接, 如: http://example.com/plugin-template.js
    */
-  public static readonly PLUGIN_FILE_URL: string =
-    "https://raw.kkgithub.com/Maxthos/ReadCat-BookSource/main/Plugin/maxos-uanyge.info.ts.js";
+  public static readonly PLUGIN_FILE_URL: string = 'https://raw.kkgithub.com/Maxthos/ReadCat-BookSource/main/Plugin/maxos-ujxsw.net.ts.js';
   /**
-   * 静态属性 BASE_URL  必填
+   * 静态属性 BASE_URL  书源、书城类必填
    * 插件请求目标链接
    */
-  public static readonly BASE_URL: string = "http://www.xuanyge.info";
+  public static readonly BASE_URL: string = 'http://www.ujxsw.net';
   /**
    * 静态属性 REQUIRE  可选
    * 要求用户填写的值
    */
-  public static readonly REQUIRE: Record<string, string> = {};
+  public static readonly REQUIRE: Record<string, RequireItem> = {};
+  /**
+   * 书源类搜索结果过滤器  可选
+   */
+  public static readonly SEARCH_FILTER: SearchFilter = void 0;
+  /**
+   * 插件是否启用，为true表示该插件已弃用  可选
+   */
+  public static readonly DEPRECATED: boolean | undefined = void 0;
   private request: ReadCatRequest;
   private store: Store;
   private cheerio: CheerioModule.load;
   private nanoid: () => string;
+  private uuid: (noDash?: boolean) => string;
   constructor(options: PluginConstructorOptions) {
-    const { request, store, cheerio, nanoid } = options;
+    const { request, store, cheerio, nanoid, uuid } = options;
     /**
      * request
      *   function get(url, config)
@@ -90,7 +100,7 @@ plugin.exports = class Plugin implements BookSource {
      *                     signal(可选): AbortSignal  中止信号
      *                   }
      *   return: Promise<{ body, code, headers }>
-     *
+     * 
      *   body: 响应体
      *   code: 响应码
      *   headers: 响应头
@@ -105,7 +115,7 @@ plugin.exports = class Plugin implements BookSource {
      *   return Promise<void>
      *   function getStoreValue(key)
      *               key: string
-     *   return Promise<any> (JavaScript基本数据类型)
+     *   return Promise<any | null> (JavaScript基本数据类型)
      *   function removeStoreValue(key)
      *               key: string
      *   return Promise<void>
@@ -122,24 +132,43 @@ plugin.exports = class Plugin implements BookSource {
      * 获取21位随机字符串
      */
     this.nanoid = nanoid;
+
+    this.uuid = uuid;
   }
 
+  
   async search(searchkey: string): Promise<SearchEntity[]> {
-    const { body } = await this.request.get(`${Plugin.BASE_URL}/modules/article/search.php?s=${searchkey}`);
-    // console.log(searchkey);
+    /*
+      控制台日志打印(仅支持log、info、error、warn、debug方法)
+      https://zhongtianwen.cn/xiaoshuosousuo/jieguo.html?searchkey=完美世界
+    */
+    console.log(searchkey);
+    const { body } = await this.request.post(`${Plugin.BASE_URL}/searchbooks.php`, {
+      params: {
+        searchkey
+      }
+    });
     const $ = this.cheerio(body);
-    const dls = $("#sitebox > dl");
-    // console.log(dls);
     const results: SearchEntity[] = [];
-    for (const dl of dls) {
-      const d = $(dl).find("dl");
-      console.log(d);
+    const uls = $('div.shulist > ul');
+    console.log(uls.length);
+    for (const ul of uls) {
+      const lis = $(ul).find('li');
+      const a = $(lis.get(2)).find('a');
+      // console.log($(a.get(0)).attr('href'));
+	    const match = $(a.get(0)).attr('href').match(/\/book\/(\d+)/);
+      //console.log($(a.get(0)).attr('href').match(/\/book\/(\d+)/)[1])
+	    const bid = match[1];
+      console.log(bid);
+	    // const fid = Math.floor(parseInt(match[1], 10) / 1000);
+      const fid = bid.slice(0, -3) || "0";
+      console.log(fid);
       results.push({
-        bookname: $(d.get(0)).children("a").text(),
-        author: $(d.get(2)).text(),
-        coverImageUrl: $(d.get(2)).attr("src"),
-        detailPageUrl: $(d.get(0)).children("a").attr("href"),
-        latestChapterTitle: $(d.get(1)).text(),
+        bookname: $(a.get(0)).text(),
+        author: $(lis.get(3)).find('a').text(),
+		    coverImageUrl: `${Plugin.BASE_URL}/files/article/image/${fid}/${bid}/${bid}s.jpg`,
+        detailPageUrl: Plugin.BASE_URL + $(a.get(0)).attr('href'),
+        latestChapterTitle: $(a.get(1)).text()
       });
     }
     return results;
@@ -147,38 +176,57 @@ plugin.exports = class Plugin implements BookSource {
 
   async getDetail(detailPageUrl: string): Promise<DetailEntity> {
     const { body } = await this.request.get(detailPageUrl);
-    const $ = this.cheerio(body);
-    const bookname = $("#info > div.info > div.infobar > h1").text();
-    const author = $("#info > div.info > div.infobar > p:nth-child(2)").text().substring(5);
-    const latestChapterTitle = $("#info > div.info > div.infobar > p:nth-child(6) > a").text();
-    const coverImageUrl = $("#info > div.sidebar > div > img").attr("src");
-    const intro = $("#info > div.info > div.intro > p").text();
-    // console.log(detailPageUrl);
-    const items = $("#list > dl > dd");
-    const chapterList: Chapter[] = [];
-    for (const item of items) {
-      const a = $(item).children("a");
+    let $ = this.cheerio(body);
+    const coverImageUrl = $('#bookimg > a.img > img').attr('src');
+    const em = $('div.d_title > h1 > em');
+    const bookname = $('div.d_title > h1').text().replace(em.text().trim(), '');
+    const author = em.children('a').text();
+    const intro = $('#bookintro').text();
+    const latestChapterTitle = $('span.new_t > a').text();
+
+    const chapterUrl = Plugin.BASE_URL + $('div.motion > a:nth-child(1)').attr('href');
+    const { body: body2 } = await this.request.get(chapterUrl);
+    $ = this.cheerio(body2);
+    const chapterList = [];
+    const clis = $('#readerlist > ul > li');
+    for (let i = 0; i < clis.length; i++) {
+      const cli = $(clis.get(i));
+      if (cli.hasClass('fj')) {
+        continue;
+      }
+      const a = cli.find('a');
+      const title = a.text();
+      const url = Plugin.BASE_URL + a.attr('href');
       chapterList.push({
-        title: a.text(),
-        url: Plugin.BASE_URL + a.attr("href"),
+        title,
+        url
       });
     }
     return {
       bookname,
       author,
-      latestChapterTitle,
       coverImageUrl,
+      latestChapterTitle,
       intro,
-      chapterList,
-    };
+      chapterList
+    }
   }
 
   async getTextContent(chapter: Chapter): Promise<string[]> {
     const { body } = await this.request.get(chapter.url);
     const $ = this.cheerio(body);
-    return $("#htmlContent")
-      .html()
-      .split("<br>")
-      .filter((t) => t.trim());
-  }
-};
+    const reg1 = /【悠久小.*?免费阅读！|纯文字在线阅.*?请访问|最快.*?阅读请。|佰度搜索.*?免费下载！|悠久小说网.*?\..*?\..*?|Ｘ２３ＵＳ．ＣＯＭ更新最快/i;
+    const reg2 = /\/p$/i;
+
+    return $('div.read-content > p').html().split('<br>').map(v => {
+      v = v.replaceAll('&nbsp;', '').trim();
+      if (reg1.test(v) || reg2.test(v)) {
+        return '';
+      }
+      if (reg2.test(v)) {
+        v = v.replace('/p', '');
+      }
+      return v.replace(reg1, '').trim();
+    }).filter(v => v !== '');
+   }
+}
